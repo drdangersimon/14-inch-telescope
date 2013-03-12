@@ -9,6 +9,11 @@ import pyfits as fits
 import multiprocessing as M
 from time import time
 
+#######BEFOR RUNNING#####
+#Read wcstools readme to correctly set up catalog library location varible
+#Download UCAC3 and Tycho-2 cats from www.ast.uct.ac.za/~thuso/cat/
+#need to have source extractor (Sextractor) installed
+#tested only in python 2.7
 
 dir_wcs = '/home/thuso/14_inch/git_repo/code/wcstools-3.8.7/'
 sextractor_cmd = 'sex'
