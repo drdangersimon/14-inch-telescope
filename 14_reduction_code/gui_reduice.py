@@ -1664,58 +1664,111 @@ def identify(uknstars, refstars, trans=None, r=5.0, verbose=True, getstars=False
 		return (matchuknstars, matchrefstars)
 	else:
 		return len(matchuknstars)
+
+def option_figure(option)
 	
 
 ###run from command line
 if __name__=='__main__':
 
     #check to see if arguemens passed
-    if len(sys.argv) > 1:
-        #indir,outdir,type
-        pass
+    #help
+    Help_txt = 'Too use program with gui help use -g or no other arguments.\n'
+    Help_txt += 'Nominal arguments are <image_path> <out_path> <option>\n'
+    Help_txt += 'Options include -b to make master bias,\n'
+    Help_txt +=  '-d <master_bias_path> to make master dark,\n'
+    Help_txt += '-f <master_bias_path> <master_dark_path> '
+    Help_txt +='<>to make master flat,\n'
+    Help_txt += '-a <fits_path> to align light frames,\n'
+    Help_txt += '-c <master_bias> <master_dark> <master_flats> '
+    Help_txt +='to calibrate light frames,\n'
+    Help_txt +=  '-s <fits_dir> <comb_type> to stack and specify'
+    Help_txt += 'combintion type (sum,mean,median,sigmaclip),\n'
+    Help_txt +=  'and -h to show this help.'
+    if len(sys.argv) < 2:
+        #no opions
+        print Help_txt
+        return None
+    opt = ['-g','-b','-d','-f','-a','-c','-s','-h','-o']
+    #if only options
 
-    ######make master bias'
-    ######make master darks
-    ######make master flats
-    ######calibrate lights
-    ######align lights
-    if use_gui:
-        pass
-    else:
-        light_path = sorted(glob(light_dir+'*'))
-    #take out non fits files
-    i = 0
-    while i < len(light_path):
-        if not (light_path[i].endswith('.fit') or 
-                light_path[i].endswith('.fits')):
-            light_path.pop(i)
-        else:
-            #remove non light images
-            if fits.getval(light_path[i],
+    if sys.argv[1] in opt:
+        #passed option in first argument
+        if sys.argv[1] == '-h':
+            print Help_txt
+            return None
+        elif sys.argv[1] == '-g':
+            print 'option not ready'
+            return None
+        elif sys.argv[1] == '-d':
+            ######make master darks
+            print 'option not ready'
+            return None
+        elif sys.argv[1] == '-b':
+            ######make master bias'
+            print 'option not ready'
+            return None
+        elif sys.argv[1] == '-f':
+            ######make master flats
+            print 'option not ready'
+            return None
+        elif sys.argv[1] == '-c':
+            ######calibrate lights
+            print 'option not ready'
+            return None
+        elif sys.argv[1] == '-a':
+            ######align lights
+            if use_gui:
+                pass
+            else:
+                light_path = sorted(glob(sys.argv[2]+'*'))
+                outdir = sys.argv[3]
+            #take out non fits files
+            i = 0
+            while i < len(light_path):
+                if not (light_path[i].endswith('.fit') or 
+                        light_path[i].endswith('.fits')):
+                    light_path.pop(i)
+                else:
+                #remove non light images
+                    if fits.getval(light_path[i],
                            'IMAGETYP').lower().startswith('light'):
-                i += 1
-            else:
-                light_path.pop(i)
+                        i += 1
+                    else:
+                        light_path.pop(i)
     
-    #start allignment
-    ident = ident_run(light_path[0],light_path)
-    #see if any images succesfully got aligned
-    Shape = shape(light_path[0],verbose=False)
-    #save algned fits to outdir
-    for id in ident:
-        if id.ok:
-            affineremap(id.ukn.filepath, id.trans, Shape,outdir=outdir)
-
-    #####stack lights
-    
-    '''#sort fits by filter
-    filter_type = {}
-    for i in light_path:
+            #start allignment
+            ident = ident_run(light_path[0],light_path)
+            #see if any images succesfully got aligned
+            Shape = shape(light_path[0],verbose=False)
+            #save algned fits to outdir
+            for id in ident:
+                if id.ok:
+                    affineremap(id.ukn.filepath, id.trans, Shape,outdir=outdir)
+            return None
+        elif sys.argv[1] == '-s':
+            print 'option not ready'
+            return None
+        elif sys.argv[1] == '-o':
+     #####stack lights
+            fits_path = sys.argv[2]
+            comb_funct = ['sum','mean','medium','sigmaclip']
+            #sort fits by filter
+            filter_type = {}
+        for i in fits_path:
         #make sure light image
-        if fits.getval(i,'IMAGETYP').lower().startswith('light'):
-            if fits.getval(i,'FILTER') not in filter_type.keys():
-                filter_type[fits.getval(i,'FILTER')] = [i]
-            else:
-                filter_type[fits.getval(i,'FILTER')].append(i)
-    print '%i filters found:'%(len(filter_type.keys())),filter_type.keys()
-    '''
+            if fits.getval(i,'IMAGETYP').lower().startswith('light'):
+                if fits.getval(i,'FILTER') not in filter_type.keys():
+                    filter_type[fits.getval(i,'FILTER')] = [i]
+                else:
+                    filter_type[fits.getval(i,'FILTER')].append(i)
+            print '%i filters found:'%(len(filter_type.keys())),filter_type.keys()
+
+    else:
+        pathdir = sys.argv[1]
+        try:
+            outdir = sys.argv[1]
+        except IndexError:
+            outdir = '.'
+    
+
