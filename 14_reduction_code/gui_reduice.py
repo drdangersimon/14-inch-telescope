@@ -27,33 +27,215 @@ def get_darks(path=None,combine_type='mean'):
 def get_bias(path=None,combine_type='mean'):
     '''finds and combine bias in a dir'''
     pass
+  
+def stack_images(indir=None, combine_type='mean', outdir=None):
+    '''Takes aligned images and stacks them with diff functions.
+    If no outdir will save in indir with suffix of combine type.'''
+    comb = ['mean', 'sum', 'median','sigmaclip']
+    assert combine_type.lower() in comb
+    if combine_type.lower() == 'mean':
+        comm = combine_mean
+    elif combine_type.lower() == 'sum':
+        comm = combine_sum
+    elif combine_type.lower() == 'median':
+        comm = combine_medium
+    elif combine_type.lower()== 'sigmaclip':
+        comm = combine_sigmaclip
+    #gui
+    if not indir:
+        pass
+    if not indir.endswith('/'):
+        indir += '/'
+    light_path = sorted(glob(indir+'*'))
+    light_path = get_fits_type(light_path,'light')
+    #sort fits by filter
+    filters = {}
+    for i in light_path:
+        filt = fits.getval(i,'FILTER')
+        if not filt in filters.keys():
+            filters[filt] = [i]
+        else:
+            filters[filt].append(i)
 
-def stack_images(path,combine_type='mean'):
-    '''uses wcs coord to align images and stacks together'''
-    pass
+    out,hdr = {},{}
+    for i in filters.keys():
+        out[i],hdr[i] = comm(filters[i])
+    #save as fits?
+    if outdir is None:
+        outdir = indir
+    else:
+        if not outdir.endswith('/'):
+            outdir += '/'
+    for i in out.keys():
+        basename = os.path.split(filters[i][0])[-1]
+        basename = os.path.splitext(basename)[0]
+        tofits(outdir+basename+'_%s.fits'%combine_type.lower(), out[i],
+               hdr[i],verbose=False)
+       
+    return out,hdr     
+
+def align_fits(indir=None, outdir=None):
+    '''Aligns all Light images in a dir. If no input then uses
+    gui to select in and out dir'''
+    if not outdir:
+        pass
+    if not indir:
+        pass
+    if not indir.endswith('/'):
+        indir += '/'
+    light_path = sorted(glob(indir+'*'))
+    light_path = get_fits_type(light_path,'light')
+    #start allignment
+    ident = ident_run(light_path[0],light_path)
+    #see if any images succesfully got aligned
+    Shape = shape(light_path[0],verbose=False)
+    #save algned fits to outdir
+    for id in ident:
+        if id.ok:
+            affineremap(id.ukn.filepath, id.trans, 
+                        Shape,outdir=outdir)
 
 ####supporting programs
 def gui_getdir():
     '''uses tk to use gui to open dir'''
     return tk.askdirectory()
 
-def combine_sigmaclip():
+def get_fits_type(indir,keyword):
+    #take out non fits files
+    i = 0
+    while i < len(indir):
+        if not (indir[i].endswith('.fit') or 
+                indir[i].endswith('.fits')):
+            indir.pop(i)
+        else:
+            #remove non light images
+            if fits.getval(indir[i],
+                           'IMAGETYP').lower().startswith(keyword):
+                i += 1
+            else:
+                indir.pop(i)
+    return indir
+  
+
+def combine_sigmaclip(file_list):
+    #fast but uses lots of ram
+    if len(file_list) < 70:
+        shape = (fits.getval(file_list[0],'NAXIS1'),
+                 fits.getval(file_list[0],'NAXIS2'),
+                 len(file_list))
+        temp = nu.zeros(shape)
+        for i,j in enumerate(file_list):
+            temp[:,:,i],hdr = fromfits(j,verbose=False)
+        out = Sigmaclip(temp,axis=2)
+    else:
+        #slow ram but takes longer
+        shape = (fits.getval(file_list[0],'NAXIS1'),
+                 fits.getval(file_list[0],'NAXIS2'))
+        out = nu.zeros(shape)
+        temp = nu.zeros((shape[0],len(file_list)))
+        for i in xrange(shape[1]):
+            for j,k in enumerate(file_list):
+                temp[:,j] = fromfits(k,verbose=False)[0][:,i]
+            out[:,i] = Sigmaclip(temp,axis=1)
+        temp,hdr = fromfits(k,verbose=False)
+    hdr.add_history('Sigmaclip combine')
+    return out,hdr
+
+def combine_mean(file_list):
+    #does mean
+    out,hdr = combine_sum(file_list)
+    out = out / float(len(file_list))
+    hdr.add_history('Then took mean')
+    return out,hdr
+                    
+
+def combine_medium(file_list):
+    #does medium assumes all have same fits header
+    #high ram but quick
+    if len(file_list) < 70:
+        shape = (fits.getval(file_list[0],'NAXIS1'),
+                 fits.getval(file_list[0],'NAXIS2'),
+                 len(file_list))
+        temp = nu.zeros(shape)
+        for i,j in enumerate(file_list):
+            temp[:,:,i],hdr = fromfits(j,verbose=False)
+        out = nu.median(temp,2)
+    else:
+        #low ram but takes longer
+        shape = (fits.getval(file_list[0],'NAXIS1'),
+                 fits.getval(file_list[0],'NAXIS2'))
+        out = nu.zeros(shape)
+        temp = nu.zeros((shape[0],len(file_list)))
+        for i in xrange(shape[1]):
+            for j,k in enumerate(file_list):
+                temp[:,j] = fromfits(k,verbose=False)[0][:,i]
+            out[:,i] = nu.median(temp,1)
+        temp,hdr = fromfits(k,verbose=False)
+    hdr.add_history('Medium combine')
+    return out,hdr
+
+def combine_sum(file_list):
+    #sums images together
+    out = False
+    for i in file_list:
+        if nu.any(out):
+            try:
+                out += fromfits(i,verbose=False)[0]
+            except ValueError:
+                print i
+                raise
+        else:
+            out,hdr = fromfits(i,verbose=False)
+    hdr.add_history('Summed from %i images'%len(file_list))
+    return out,hdr
+
+def combine_SDmask(file_list):
     pass
 
-def combine_mean():
-    pass
+def Sigmaclip(array,low=4.,high=4,axis=None):
+       '''Iterative sigma-clipping of along the given axis.
+	   
+	    The output array contains only those elements of the input array `c`
+	    that satisfy the conditions ::
+	   
+	        mean(c) - std(c)*low < c < mean(c) + std(c)*high
+	
+	    Parameters
+	    ----------
+	    a : array_like
+	        data array
+	    low : float
+	        lower bound factor of sigma clipping
+	    high : float
+	        upper bound factor of sigma clipping
+	
+	    Returns
+	    -------
+	    c : array
+	        sigma clipped mean along axis
+	   '''
+       c = np.asarray(array)
+       if axis is None or c.ndim == 1:
+           from scipy.stats import sigmaclip
+           return nu.mean(sigmaclip(c)[0])
+       #create masked array
+       c_mask = nu.ma.masked_array(c,nu.isnan(c))
+       delta = 1
+       while delta:
+           c_std = c_mask.std(axis=axis)
+           c_mean = c_mask.mean(axis=axis)
+           size = c_mask.mask.sum()
+           critlower = c_mean - c_std*low
+           critupper = c_mean + c_std*high
+           indexer = [slice(None)] * c.ndim
+           for i in range(c.shape[axis]):
+               indexer[axis] = slice(i,i+1)
+               c_mask[indexer].mask = nu.logical_and(
+                   c_mask[indexer].squeeze() > critlower, 
+                   c_mask[indexer].squeeze()<critupper) == False
+           delta = size - c_mask.mask.sum()
+       return c_mask.mean(axis).data
 
-def combine_medium():
-    pass
-
-def combine_SDmask():
-    pass
-
-def align_fits():
-    pass
-
-def sextract():
-    pass
 
 ####not my code
 
@@ -367,9 +549,9 @@ def affineremap(filepath, transform, shape, alifilepath=None, outdir = "alipy_ou
 		outdir = os.path.split(alifilepath)[0]
 	if not os.path.isdir(outdir):
 		os.makedirs(outdir)
-		
-	
-	tofits(alifilepath, data, hdr = None, verbose = verbose)
+	#add fits header about transform	
+	hdr.add_history('Alighn.py: Did Affine remap to Alighn fits')
+	tofits(alifilepath, data, hdr = hdr, verbose = verbose)
 	
 	
 	if makepng:
@@ -1665,110 +1847,6 @@ def identify(uknstars, refstars, trans=None, r=5.0, verbose=True, getstars=False
 	else:
 		return len(matchuknstars)
 
-def option_figure(option)
-	
-
 ###run from command line
 if __name__=='__main__':
-
-    #check to see if arguemens passed
-    #help
-    Help_txt = 'Too use program with gui help use -g or no other arguments.\n'
-    Help_txt += 'Nominal arguments are <image_path> <out_path> <option>\n'
-    Help_txt += 'Options include -b to make master bias,\n'
-    Help_txt +=  '-d <master_bias_path> to make master dark,\n'
-    Help_txt += '-f <master_bias_path> <master_dark_path> '
-    Help_txt +='<>to make master flat,\n'
-    Help_txt += '-a <fits_path> to align light frames,\n'
-    Help_txt += '-c <master_bias> <master_dark> <master_flats> '
-    Help_txt +='to calibrate light frames,\n'
-    Help_txt +=  '-s <fits_dir> <comb_type> to stack and specify'
-    Help_txt += 'combintion type (sum,mean,median,sigmaclip),\n'
-    Help_txt +=  'and -h to show this help.'
-    if len(sys.argv) < 2:
-        #no opions
-        print Help_txt
-        return None
-    opt = ['-g','-b','-d','-f','-a','-c','-s','-h','-o']
-    #if only options
-
-    if sys.argv[1] in opt:
-        #passed option in first argument
-        if sys.argv[1] == '-h':
-            print Help_txt
-            return None
-        elif sys.argv[1] == '-g':
-            print 'option not ready'
-            return None
-        elif sys.argv[1] == '-d':
-            ######make master darks
-            print 'option not ready'
-            return None
-        elif sys.argv[1] == '-b':
-            ######make master bias'
-            print 'option not ready'
-            return None
-        elif sys.argv[1] == '-f':
-            ######make master flats
-            print 'option not ready'
-            return None
-        elif sys.argv[1] == '-c':
-            ######calibrate lights
-            print 'option not ready'
-            return None
-        elif sys.argv[1] == '-a':
-            ######align lights
-            if use_gui:
-                pass
-            else:
-                light_path = sorted(glob(sys.argv[2]+'*'))
-                outdir = sys.argv[3]
-            #take out non fits files
-            i = 0
-            while i < len(light_path):
-                if not (light_path[i].endswith('.fit') or 
-                        light_path[i].endswith('.fits')):
-                    light_path.pop(i)
-                else:
-                #remove non light images
-                    if fits.getval(light_path[i],
-                           'IMAGETYP').lower().startswith('light'):
-                        i += 1
-                    else:
-                        light_path.pop(i)
-    
-            #start allignment
-            ident = ident_run(light_path[0],light_path)
-            #see if any images succesfully got aligned
-            Shape = shape(light_path[0],verbose=False)
-            #save algned fits to outdir
-            for id in ident:
-                if id.ok:
-                    affineremap(id.ukn.filepath, id.trans, Shape,outdir=outdir)
-            return None
-        elif sys.argv[1] == '-s':
-            print 'option not ready'
-            return None
-        elif sys.argv[1] == '-o':
-     #####stack lights
-            fits_path = sys.argv[2]
-            comb_funct = ['sum','mean','medium','sigmaclip']
-            #sort fits by filter
-            filter_type = {}
-        for i in fits_path:
-        #make sure light image
-            if fits.getval(i,'IMAGETYP').lower().startswith('light'):
-                if fits.getval(i,'FILTER') not in filter_type.keys():
-                    filter_type[fits.getval(i,'FILTER')] = [i]
-                else:
-                    filter_type[fits.getval(i,'FILTER')].append(i)
-            print '%i filters found:'%(len(filter_type.keys())),filter_type.keys()
-
-    else:
-        pathdir = sys.argv[1]
-        try:
-            outdir = sys.argv[1]
-        except IndexError:
-            outdir = '.'
-    
-
+    pass
