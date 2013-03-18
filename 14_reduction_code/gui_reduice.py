@@ -16,31 +16,122 @@ fits=pyfits
 nu=np
 
 ###main program
-def get_flats(path=None,combine_type='mean'):
+def get_flats(path=None,combine_type='mean',outdir=None,
+	 Filter='FILTER'):
     '''finds and combine flats in a dir'''
-    pass
+    comm = comb_Type(combine_type)
+    if not path:
+        pass
+    if not path.endswith('/'):
+        path += '/'
+    fits_path = sorted(glob(path+'*'))
+    fits_path = get_fits_type(fits_path,'flat')
+    filters = {}
+    #sort flats by filter
+    for i in fits_path:
+        filt = str(fits.getval(i,Filter))
+        if not filt in filters.keys():
+            filters[filt] = [i]
+        else:
+            filters[filt].append(i)
 
-def get_darks(path=None,combine_type='mean'):
-    '''finds and combine darks in a dir'''
-    pass
+    out,hdr = {},{}
+    for i in filters.keys():
+        out[i],hdr[i] = comm(filters[i])
+    #save as fits?
+    if outdir is None:
+        outdir = path
+    else:
+        if not outdir.endswith('/'):
+            outdir += '/'
+    for i in out.keys():
+        basename = os.path.split(filters[i][0])[-1]
+        basename = os.path.splitext(basename)[0]
+        tofits(outdir+basename+'_%s.fits'%combine_type.lower(), out[i],
+               hdr[i],verbose=False)
+    return out,hdr
 
-def get_bias(path=None,combine_type='mean'):
-    '''finds and combine bias in a dir'''
-    pass
+def get_darks(path=None, combine_type='mean', outdir=None,
+              Filter=('SET-TEMP','EXPTIME')):
+    '''finds and combine darks in a dir. Sorts by exporsure time and temp'''
+    comm = comb_Type(combine_type)
+    if not path:
+        pass
+    if not path.endswith('/'):
+        path += '/'
+    fits_path = sorted(glob(path+'*'))
+    fits_path = get_fits_type(fits_path,'dark')
+    #sort by time and temp
+    filters = {}
+    for i in fits_path:
+	if type(Filter) is tuple:
+            filt = ''
+            for j in Filter:
+                filt += str(fits.getval(i,j)) + '_'
+        else:
+            filt = fits.getval(i,Filter)
+        if not filt in filters.keys():
+            filters[filt] = [i]
+        else:
+            filters[filt].append(i)
+
+    out,hdr = {},{}
+    for i in filters.keys():
+        out[i],hdr[i] = comm(filters[i])
+    #save as fits?
+    if outdir is None:
+        outdir = path
+    else:
+        if not outdir.endswith('/'):
+            outdir += '/'
+    for i in out.keys():
+        basename = os.path.split(filters[i][0])[-1]
+        basename = os.path.splitext(basename)[0]
+        tofits(outdir+basename+'_%s.fits'%combine_type.lower(), out[i],
+               hdr[i],verbose=False)
+    return out,hdr
+
+
+
+def get_bias(path=None, combine_type='mean', outdir=None, Filter='SET-TEMP'):
+    '''finds and combine bias in a dir. Sorts by temperature.'''
+    comm = comb_Type(combine_type)
+    if not path:
+        pass
+    if not path.endswith('/'):
+        path += '/'
+    fits_path = sorted(glob(path+'*'))
+    fits_path = get_fits_type(fits_path,'bias')
+    #sort by time
+    filters = {}
+    for i in fits_path:
+        filt = str(fits.getval(i,Filter))
+        if not filt in filters.keys():
+            filters[filt] = [i]
+        else:
+            filters[filt].append(i)
+
+    out,hdr = {},{}
+    for i in filters.keys():
+        out[i],hdr[i] = comm(filters[i])
+    #save as fits?
+    if outdir is None:
+        outdir = path
+    else:
+        if not outdir.endswith('/'):
+            outdir += '/'
+    for i in out.keys():
+        basename = os.path.split(filters[i][0])[-1]
+        basename = os.path.splitext(basename)[0]
+        tofits(outdir+basename+'_%s.fits'%combine_type.lower(), out[i],
+               hdr[i],verbose=False)
+    return out,hdr
+
   
 def stack_images(indir=None, combine_type='mean', outdir=None):
     '''Takes aligned images and stacks them with diff functions.
     If no outdir will save in indir with suffix of combine type.'''
-    comb = ['mean', 'sum', 'median','sigmaclip']
-    assert combine_type.lower() in comb
-    if combine_type.lower() == 'mean':
-        comm = combine_mean
-    elif combine_type.lower() == 'sum':
-        comm = combine_sum
-    elif combine_type.lower() == 'median':
-        comm = combine_medium
-    elif combine_type.lower()== 'sigmaclip':
-        comm = combine_sigmaclip
+    comm = comb_Type(combine_type)
     #gui
     if not indir:
         pass
@@ -96,9 +187,22 @@ def align_fits(indir=None, outdir=None):
                         Shape,outdir=outdir)
 
 ####supporting programs
-def gui_getdir():
+def comb_Type(combine_type):
+    comb = ['mean', 'sum', 'median','sigmaclip']
+    assert combine_type.lower() in comb
+    if combine_type.lower() == 'mean':
+        comm = combine_mean
+    elif combine_type.lower() == 'sum':
+        comm = combine_sum
+    elif combine_type.lower() == 'median':
+        comm = combine_medium
+    elif combine_type.lower()== 'sigmaclip':
+        comm = combine_sigmaclip
+    return comm
+
+def gui_getdir(initdir=os.curdir,title='Please Select Dir'):
     '''uses tk to use gui to open dir'''
-    return tk.askdirectory()
+    return tk.askdirectory(initialdir=initdir, title=title)
 
 def get_fits_type(indir,keyword):
     #take out non fits files
