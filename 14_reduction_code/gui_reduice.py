@@ -5,7 +5,7 @@ import tkFileDialog as tk
 import numpy as np
 import pylab as lab
 import pyfits 
-import set_cord 
+#import set_cord 
 from glob import glob
 import os,csv,math,shutil,sys
 import asciidata,operator,copy,itertools
@@ -14,16 +14,23 @@ import scipy.ndimage as ndimage
 
 fits=pyfits
 nu=np
+sexcmd = 'sex'
 
 ###main program
 def get_flats(path=None,combine_type='mean',outdir=None,
 	 Filter='FILTER'):
     '''finds and combine flats in a dir'''
     comm = comb_Type(combine_type)
-    if not path:
-        pass
+    #gui options
+    if path is None:
+        path = gui_getdir(title='Please Select Flats dir')
+        if not path:
+            raise ValueError('Must specify directory where files are.')
     if not path.endswith('/'):
         path += '/'
+    if outdir is None:
+        outdir = gui_getdir(title='Please Select Save Directory')
+    #load path to flats
     fits_path = sorted(glob(path+'*'))
     fits_path = get_fits_type(fits_path,'flat')
     filters = {}
@@ -55,10 +62,16 @@ def get_darks(path=None, combine_type='mean', outdir=None,
               Filter=('SET-TEMP','EXPTIME')):
     '''finds and combine darks in a dir. Sorts by exporsure time and temp'''
     comm = comb_Type(combine_type)
-    if not path:
-        pass
+    #gui select directory
+    if path is None:
+        path = gui_getdir(title='Please Select Dark Directory')
+        if not path:
+            raise ValueError('Must specify directory where files are.')
     if not path.endswith('/'):
         path += '/'
+    if outdir is None:
+        outdir = gui_getdir(title='Please Select Save Directory')
+    #load paths to fits
     fits_path = sorted(glob(path+'*'))
     fits_path = get_fits_type(fits_path,'dark')
     #sort by time and temp
@@ -96,10 +109,16 @@ def get_darks(path=None, combine_type='mean', outdir=None,
 def get_bias(path=None, combine_type='mean', outdir=None, Filter='SET-TEMP'):
     '''finds and combine bias in a dir. Sorts by temperature.'''
     comm = comb_Type(combine_type)
-    if not path:
-        pass
+    #gui load dir
+    if path is None:
+        path = gui_getdir(title='Please Select Bias Directory')
+        if not path:
+            raise ValueError('Must specify directory where files are.')
     if not path.endswith('/'):
         path += '/'
+    if outdir is None:
+        outdir = gui_getdir(title='Please Select Save Directory')
+    #find path to files
     fits_path = sorted(glob(path+'*'))
     fits_path = get_fits_type(fits_path,'bias')
     #sort by time
@@ -128,16 +147,21 @@ def get_bias(path=None, combine_type='mean', outdir=None, Filter='SET-TEMP'):
     return out,hdr
 
   
-def stack_images(indir=None, combine_type='mean', outdir=None):
+def stack_images(path=None, combine_type='mean', outdir=None):
     '''Takes aligned images and stacks them with diff functions.
     If no outdir will save in indir with suffix of combine type.'''
     comm = comb_Type(combine_type)
-    #gui
-    if not indir:
-        pass
-    if not indir.endswith('/'):
-        indir += '/'
-    light_path = sorted(glob(indir+'*'))
+    #gui load dir
+    if path is None:
+        path = gui_getdir(title='Please Select Fits dir')
+        if not path:
+            raise ValueError('Must specify directory where files are.')
+    if not path.endswith('/'):
+        path += '/'
+    if outdir is None:
+        outdir = gui_getdir(title='Please Select Save Directory')
+    #load path to files
+    light_path = sorted(glob(path+'*'))
     light_path = get_fits_type(light_path,'light')
     #sort fits by filter
     filters = {}
@@ -165,16 +189,19 @@ def stack_images(indir=None, combine_type='mean', outdir=None):
        
     return out,hdr     
 
-def align_fits(indir=None, outdir=None):
+def align_fits(path=None, outdir=None):
     '''Aligns all Light images in a dir. If no input then uses
     gui to select in and out dir'''
-    if not outdir:
-        pass
-    if not indir:
-        pass
-    if not indir.endswith('/'):
-        indir += '/'
-    light_path = sorted(glob(indir+'*'))
+    if path is None:
+        path = gui_getdir(title='Please Select Fits dir')
+        if not path:
+            raise ValueError('Must specify directory where files are.')
+    if not path.endswith('/'):
+        path += '/'
+    if outdir is None:
+        outdir = gui_getdir(title='Please Select Save Directory')
+    #load path to fits
+    light_path = sorted(glob(path+'*'))
     light_path = get_fits_type(light_path,'light')
     #start allignment
     ident = ident_run(light_path[0],light_path)
@@ -1132,9 +1159,9 @@ def _setup_img(image, name):
 		pyfits.writeto(name, image)
 		
 
-def _get_cmd(img, img_ref, conf_args):
+def _get_cmd(img, img_ref, conf_args,sexcmd='sex'):
 	ref = img_ref if img_ref is not None else ''
-	cmd = ' '.join(['sex', ref, img, '-c .pysex.sex '])
+	cmd = ' '.join([sexcmd, ref, img, '-c .pysex.sex '])
 	args = [''.join(['-', key, ' ', str(conf_args[key])]) for key in conf_args]
 	cmd += ' '.join(args)
 	return cmd
@@ -1173,7 +1200,8 @@ def pysex_run(image='', imageref='', params=[], conf_file=None, conf_args={}, ke
 		cat = pysex.run(myimage, params=['X_IMAGE', 'Y_IMAGE', 'FLUX_APER'], conf_args={'PHOT_APERTURES':5})
 		print cat['FLUX_APER']
 	"""
-	
+	# Set sexcmd from global
+        global sexcmd
 	# Preparing permanent catalog filepath :
 	(imgdir, filename) = os.path.split(image)
 	(common, ext) = os.path.splitext(filename)
@@ -1214,12 +1242,17 @@ def pysex_run(image='', imageref='', params=[], conf_file=None, conf_args={}, ke
 	else: imref_name = imageref
 	conf_file, conf_args = _check_files(conf_file, conf_args, verbose)
 	_setup(conf_file, params)
-	cmd = _get_cmd(im_name, imref_name, conf_args)
+	cmd = _get_cmd(im_name, imref_name, conf_args,sexcmd)
 	res = os.system(cmd)
 	if res:
-		print "Error during sextractor execution!"
-		_cleanup()
-		return
+		#try different cmd for sextractor
+		sexcmd = 'sextractor'
+		cmd = _get_cmd(im_name, imref_name, conf_args,sexcmd)
+		res = os.system(cmd)
+		if res:
+			print "Error during sextractor execution!"
+			_cleanup()
+			return
 
 	# Keeping the cat at a permanent location :
 	if keepcat and type(image) == type(''):
