@@ -10,7 +10,7 @@ from glob import glob
 import os,csv,math,shutil,sys
 import asciidata,operator,copy,itertools
 import scipy.spatial as spatial
-import scipy.ndimage as ndimage
+import scipy.ndimage as ndimage #can use for filters (high/low pass)
 
 fits=pyfits
 nu=np
@@ -19,7 +19,15 @@ sexcmd = 'sex'
 ###main program
 def get_flats(path=None,combine_type='mean',outdir=None,
 	 Filter='FILTER'):
-    '''finds and combine flats in a dir'''
+    '''(str,str,str,str) -> dict(ndarry), dict(asciidata)
+
+    Opens flat field directory, combines all *.fits or *.fit files in the 
+    directory, sorts by Filter option and out puts fits file to outdir and 
+    also out ndarray of combined fits files and fits header with modified 
+    history.  Combine types can include: "mean","median","sum" and "sigmaclip."
+    Known Issues:
+    Median and sigmaclip combine give artifacts when use.'''
+
     comm = comb_Type(combine_type)
     #gui options
     if path is None:
@@ -60,7 +68,16 @@ def get_flats(path=None,combine_type='mean',outdir=None,
 
 def get_darks(path=None, combine_type='mean', outdir=None,
               Filter=('SET-TEMP','EXPTIME')):
-    '''finds and combine darks in a dir. Sorts by exporsure time and temp'''
+    '''(str,str,str,tuple(str) or str) -> dict(ndarry), dict(asciidata)
+
+    Opens dark directory, combines all *.fits or *.fit files in the 
+    directory, sorts by Filter options (can have multiple) and out 
+    puts fits file to outdir and also out ndarray of combined fits 
+    files and fits header with modified history.  Combine types can 
+    include: "mean","median","sum" and "sigmaclip."
+    Known Issues:
+    Median and sigmaclip combine give artifacts when use.'''
+
     comm = comb_Type(combine_type)
     #gui select directory
     if path is None:
@@ -107,7 +124,16 @@ def get_darks(path=None, combine_type='mean', outdir=None,
 
 
 def get_bias(path=None, combine_type='mean', outdir=None, Filter='SET-TEMP'):
-    '''finds and combine bias in a dir. Sorts by temperature.'''
+    '''(str, str, str, str) -> dict(ndarray), dict(asciidata)
+
+    Opens bias directory, combines all *.fits or *.fit files in
+    the directory, sorts by Filter option and out puts fits file
+    to outdir and also out ndarray of combined fits files and fits
+    header with modified history.  Combine types can include: 
+    "mean","median","sum" and "sigmaclip."
+    Known Issues:
+    Median and sigmaclip combine give artifacts when use.'''
+
     comm = comb_Type(combine_type)
     #gui load dir
     if path is None:
@@ -148,8 +174,16 @@ def get_bias(path=None, combine_type='mean', outdir=None, Filter='SET-TEMP'):
 
   
 def stack_images(path=None, combine_type='mean', outdir=None):
-    '''Takes aligned images and stacks them with diff functions.
-    If no outdir will save in indir with suffix of combine type.'''
+    '''(str, str, str) -> dict(ndarray), dict(asciidata)
+
+    Opens image directory, combines all *.fits or *.fit files 
+    in the directory, sorts by filter in fits header and outputs
+    fits file to outdir and also out ndarray of combined fits files
+    and fits header with modified history.  Combine types can
+    include: "mean","median","sum" and "sigmaclip."
+    Known Issues:
+    Median and sigmaclip combine give artifacts when use.'''
+
     comm = comb_Type(combine_type)
     #gui load dir
     if path is None:
@@ -190,8 +224,14 @@ def stack_images(path=None, combine_type='mean', outdir=None):
     return out,hdr     
 
 def align_fits(path=None, outdir=None):
-    '''Aligns all Light images in a dir. If no input then uses
-    gui to select in and out dir'''
+    '''(str, str) -> NoneType
+
+    Aligns all light images in a directory by matching patterns
+    in the stars. If no input then uses GUI to select in and out directory.
+
+    Must have Source Extractor installed and called from bash terminal as
+    "sex" or "sextractor."'''
+
     if path is None:
         path = gui_getdir(title='Please Select Fits dir')
         if not path:
@@ -215,6 +255,10 @@ def align_fits(path=None, outdir=None):
 
 ####supporting programs
 def comb_Type(combine_type):
+    '''(str) -> function
+
+    Sets correct function for input str.
+    '''
     comb = ['mean', 'sum', 'median','sigmaclip']
     assert combine_type.lower() in comb
     if combine_type.lower() == 'mean':
@@ -228,10 +272,17 @@ def comb_Type(combine_type):
     return comm
 
 def gui_getdir(initdir=os.curdir,title='Please Select Dir'):
-    '''uses tk to use gui to open dir'''
+    '''(str, str) -> unicode
+
+    Uses tk to make a GUI to get path to a directory.'''
+
     return tk.askdirectory(initialdir=initdir, title=title)
 
 def get_fits_type(indir,keyword):
+    '''(list or str, str) -> list of str
+
+    Removes files without the *.fits or *.fit extentions.
+    '''
     #take out non fits files
     i = 0
     while i < len(indir):
@@ -248,9 +299,14 @@ def get_fits_type(indir,keyword):
     return indir
   
 
-def combine_sigmaclip(file_list):
+def combine_sigmaclip(file_list, num=70):
+    '''(str, int) -> ndarray, asciidata
+
+    Puts list of fits files into correct order for use with
+    sigma clipping function. Adds to fits header histrory.
+    '''
     #fast but uses lots of ram
-    if len(file_list) < 70:
+    if len(file_list) < num:
         shape = (fits.getval(file_list[0],'NAXIS1'),
                  fits.getval(file_list[0],'NAXIS2'),
                  len(file_list))
@@ -273,17 +329,27 @@ def combine_sigmaclip(file_list):
     return out,hdr
 
 def combine_mean(file_list):
-    #does mean
+    '''(str) -> ndarray, asciidata
+
+    Puts list of fits files into correct order for use with
+    mean function. Adds to fits header histrory.
+
+    '''
     out,hdr = combine_sum(file_list)
     out = out / float(len(file_list))
     hdr.add_history('Then took mean')
     return out,hdr
                     
 
-def combine_medium(file_list):
+def combine_medium(file_list , num=70):
+    '''(str, int) -> ndarray, asciidata
+
+    Puts list of fits files into correct order for use with
+    median function. Adds to fits header histrory.
+    '''
     #does medium assumes all have same fits header
     #high ram but quick
-    if len(file_list) < 70:
+    if len(file_list) < num:
         shape = (fits.getval(file_list[0],'NAXIS1'),
                  fits.getval(file_list[0],'NAXIS2'),
                  len(file_list))
@@ -306,6 +372,12 @@ def combine_medium(file_list):
     return out,hdr
 
 def combine_sum(file_list):
+    '''(str) -> ndarray, acsciidata
+
+    Puts list of fits files into correct order for use with
+    sum function. Adds to fits header histrory.
+
+    '''
     #sums images together
     out = False
     for i in file_list:
@@ -320,39 +392,47 @@ def combine_sum(file_list):
     hdr.add_history('Summed from %i images'%len(file_list))
     return out,hdr
 
-def combine_SDmask(file_list):
+def combine_SDmask(file_list, num=70):
+    '''(str, int) -> ndarray, acsciidata
+
+    Puts list of fits files into correct order for use with
+    SD masking function. Adds to fits header histrory.
+
+    '''
     pass
 
 def Sigmaclip(array,low=4.,high=4,axis=None):
-       '''Iterative sigma-clipping of along the given axis.
+    '''(ndarray, int, int, int) -> ndarray
+
+    Iterative sigma-clipping of along the given axis.
 	   
-	    The output array contains only those elements of the input array `c`
-	    that satisfy the conditions ::
+    The output array contains only those elements of the input array `c`
+    that satisfy the conditions ::
 	   
-	        mean(c) - std(c)*low < c < mean(c) + std(c)*high
+    mean(c) - std(c)*low < c < mean(c) + std(c)*high
 	
-	    Parameters
-	    ----------
-	    a : array_like
-	        data array
-	    low : float
-	        lower bound factor of sigma clipping
-	    high : float
-	        upper bound factor of sigma clipping
-	
-	    Returns
-	    -------
-	    c : array
-	        sigma clipped mean along axis
-	   '''
-       c = np.asarray(array)
-       if axis is None or c.ndim == 1:
-           from scipy.stats import sigmaclip
-           return nu.mean(sigmaclip(c)[0])
-       #create masked array
-       c_mask = nu.ma.masked_array(c,nu.isnan(c))
-       delta = 1
-       while delta:
+    Parameters
+    ----------
+    a : array_like
+    data array
+    low : float
+    lower bound factor of sigma clipping
+    high : float
+    upper bound factor of sigma clipping
+    
+    Returns
+    -------
+    c : array
+    sigma clipped mean along axis
+    '''
+    c = np.asarray(array)
+    if axis is None or c.ndim == 1:
+        from scipy.stats import sigmaclip
+        return nu.mean(sigmaclip(c)[0])
+    #create masked array
+    c_mask = nu.ma.masked_array(c,nu.isnan(c))
+    delta = 1
+    while delta:
            c_std = c_mask.std(axis=axis)
            c_mean = c_mask.mean(axis=axis)
            size = c_mask.mask.sum()
@@ -365,12 +445,10 @@ def Sigmaclip(array,low=4.,high=4,axis=None):
                    c_mask[indexer].squeeze() > critlower, 
                    c_mask[indexer].squeeze()<critupper) == False
            delta = size - c_mask.mask.sum()
-       return c_mask.mean(axis).data
+    return c_mask.mean(axis).data
 
 
 ####not my code
-
-
 ###ident
 class Identification:
 	"""
