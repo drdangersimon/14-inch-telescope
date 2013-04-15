@@ -25,6 +25,10 @@ def get_flats(path=None,combine_type='mean',outdir=None,
     directory, sorts by Filter option and out puts fits file to outdir and 
     also out ndarray of combined fits files and fits header with modified 
     history.  Combine types can include: "mean","median","sum" and "sigmaclip."
+ 
+    Flats must be calibrate before combining. Counts should also be
+    simmilar or combining will give wrong.
+
     Known Issues:
     Median and sigmaclip combine give artifacts when use.'''
 
@@ -180,7 +184,10 @@ def stack_images(path=None, combine_type='mean', outdir=None):
     in the directory, sorts by filter in fits header and outputs
     fits file to outdir and also out ndarray of combined fits files
     and fits header with modified history.  Combine types can
-    include: "mean","median","sum" and "sigmaclip."
+    include: "mean","median","sum" and "sigmaclip." 
+
+    Images must be calibrated first before this program is used.
+
     Known Issues:
     Median and sigmaclip combine give artifacts when use.'''
 
@@ -230,7 +237,10 @@ def align_fits(path=None, outdir=None):
     in the stars. If no input then uses GUI to select in and out directory.
 
     Must have Source Extractor installed and called from bash terminal as
-    "sex" or "sextractor."'''
+    "sex" or "sextractor."
+
+    Images must be calibrated first before this program is used.
+    '''
 
     if path is None:
         path = gui_getdir(title='Please Select Fits dir')
@@ -254,6 +264,18 @@ def align_fits(path=None, outdir=None):
                         Shape,outdir=outdir)
 
 ####supporting programs
+def Normalize(a):
+    '''(ndarry) -> ndarry
+
+    Normalizes an array so that all values are in [0,1]. 
+    >>> a = numpy.array([-1.,0.,1.],dtype=float)
+    >>> Normalize(a)
+    array([ 0. ,  0.5,  1. ])
+    '''
+    a = nu.asarray(a)
+    return (a - a.min())/(a.ptp())
+
+
 def comb_Type(combine_type):
     '''(str) -> function
 
@@ -2064,4 +2086,134 @@ def identify(uknstars, refstars, trans=None, r=5.0, verbose=True, getstars=False
 
 ###run from command line
 if __name__=='__main__':
-    pass
+    #steps for data reduction
+
+    #combine bias
+
+    #combine darks
+
+    #make master dark
+
+    #calibrate each flat with master dark
+
+    #transform flats so means and std are simmilar
+
+    #combine flats to make master dark
+
+    #calibrate each image with master dark and master flat
+
+    #align images
+
+    #combine images 
+    
+    #example on how to make master flat
+    
+    '''
+    def make_master_flat(dark, bias=None, cal=False, path=None, combine_type='mean',
+                     outdir=None, Filter='FILTER'):
+    ''''''(dict(ndarray), dict(ndarray), str, str, str, str) -> dict(ndarray)
+
+    Sky flats may have variable brightness because of the dimming of the
+    sky. This program helps to better calibrate these by doing the calibration
+    on the individual images and then normalizing the flats so they can better
+    be averaged together.
+
+    Takes in a dark and bias, unless dark has been calibrated, then cal=True 
+    and no bias is required.
+
+    Returns a calibrated, normalized and combined flat field sorted by Filter
+    option.
+    ''''''
+    #gui get flats
+    if path is None:
+        path = gui_getdir(title='Please Select Flats dir')
+        if not path:
+            raise ValueError('Must specify directory where files are.')
+    if not path.endswith('/'):
+        path += '/'
+    if outdir is None:
+        outdir = gui_getdir(title='Please Select Save Directory')
+    #load path to flats
+    fits_path = sorted(glob(path+'*'))
+    fits_path = get_fits_type(fits_path,'flat')
+    filters = {}
+    #sort flats by filter
+    for i in fits_path:
+        filt = str(fits.getval(i,Filter))
+        if not filt in filters.keys():
+            filters[filt] = [i]
+        else:
+            filters[filt].append(i)
+    ######calibrate individual images
+    #create temp dir to store calbirated flats
+    if not os.path.isdir('temp'):
+        os.mkdir('temp')
+    out, hdr = {}, {}
+    for i in filters.keys():
+        #hold individual flats and their fits headers
+        temp_flat, temp_hdr = [], []
+        for k,j in enumerate(filters[i]):
+            #load flat
+            temp = fromfits(j,verbose=False)
+            temp_flat.append(temp[0]) #assgin
+            temp_hdr.append(temp[1]) #assign header
+            #try to select correct dark
+            dark_key = (str(temp_hdr[-1]['SET-TEMP']) + '_' + 
+                        str(temp_hdr[-1]['EXPTIME']) + '_')
+            if not dark.has_key(dark_key):
+                #fix later
+                raise KeyError('Dark must have "%s" key'%dark_key)
+            if cal: #if dark is a master dark
+                temp_flat[-1] -= dark[dark_key] #dark subtract
+                #put dark subtraction into fits header
+                temp_hdr[-1].add_history('Dark subtracted')
+            else:
+                #if dark not master use bias
+                temp_flat[-1] -= (dark[dark_key] + bias[bias.keys()[0]])
+                temp_hdr[-1].add_history('Dark and Bias subtracted')
+            #save calibrated image
+            tofits('temp/' + j[j.rfind('/')+1:], temp_flat[-1], 
+                   temp_hdr[-1], False)
+            filters[i][k] = 'temp/' + j[j.rfind('/')+1:]
+        #make master for filter hdr
+        hdr[i] = temp_hdr[-1]
+        #combine
+        temp_flat = nu.dstack(temp_flat) #turn list to ndarray
+        for k in range(temp_flat.shape[2]):
+            #scale flats so can be combined
+            mean = nu.mean(temp_flat[:,:,k])
+            std = nu.std(temp_flat[:,:,k])
+            temp_flat[:,:,k] = (temp_flat[:,:,k] - mean)/std
+        #different combine types
+        if combine_type == 'mean':
+            out[i] = nu.mean(temp_flat,2)
+            hdr[i].add_history('Mean combine')
+        elif combine_type == 'median':
+            out[i] = nu.median(temp_flat,2)
+            hdr[i].add_history('Median combine')
+        elif combine_type == 'sigmaclip':
+            out[i] = Sigmaclip(temp_flat, axis=2)
+            hdr[i].add_history('Sigma clip combine')
+        elif combine_type == 'sum':
+            #crash for now
+            out[i] = temp_flat[:,:,0] + nu.nan
+            hdr[i].add_history('Summed Images')
+        else:
+            raise ValueError('Do not even know how this error came up')
+        #normalize flat
+        out[i] -=  out[i].min()
+        out[i] /= out[i]/out[i].max()
+        hdr[i].add_history('Normalized')
+    #save master flat as fits?
+    if outdir is None:
+        outdir = path
+    else:
+        if not outdir.endswith('/'):
+            outdir += '/'
+    for i in out.keys():
+        basename = os.path.split(filters[i][0])[-1]
+        basename = os.path.splitext(basename)[0]
+        tofits(outdir+basename+'_%s.fits'%combine_type.lower(), out[i],
+               hdr[i],verbose=False)
+    return out, hdr
+    '''
