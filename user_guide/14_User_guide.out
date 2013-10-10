@@ -1,12 +1,34 @@
-\BOOKMARK [0][-]{chapter.1}{Introduction}{}% 1
-\BOOKMARK [0][-]{chapter.2}{Basic Observation Procedures}{}% 2
-\BOOKMARK [1][-]{subsection.2.0.1}{Start of Night Check List}{chapter.2}% 3
-\BOOKMARK [2][-]{subsection.2.0.2}{End of Night Check List}{subsection.2.0.1}% 4
-\BOOKMARK [2][-]{subsection.2.0.3}{The SkyX}{subsection.2.0.1}% 5
-\BOOKMARK [2][-]{subsection.2.0.4}{Starting the The SkyX}{subsection.2.0.1}% 6
-\BOOKMARK [1][-]{section.2.1}{Maxim DL}{chapter.2}% 7
-\BOOKMARK [0][-]{chapter.3}{Advanced Observation Procedures}{}% 8
-\BOOKMARK [0][-]{chapter.4}{Switching Instruments}{}% 9
-\BOOKMARK [0][-]{chapter.5}{Maintenance}{}% 10
-\BOOKMARK [0][-]{chapter.6}{Using Maxim DL for Imaging and Science}{}% 11
-\BOOKMARK [0][-]{appendix.A}{A}{}% 12
+\BOOKMARK [0][-]{chapter.1}{The UCT Teaching Observatory}{}% 1
+\BOOKMARK [0][-]{chapter.2}{Basic Observing Procedures}{}% 2
+\BOOKMARK [1][-]{section.2.1}{Start up procedures}{chapter.2}% 3
+\BOOKMARK [2][-]{subsection.2.1.1}{Connecting the laptop}{section.2.1}% 4
+\BOOKMARK [2][-]{subsection.2.1.2}{Dome and telescope cover}{section.2.1}% 5
+\BOOKMARK [2][-]{subsection.2.1.3}{Unlocking the RA and DEC drives}{section.2.1}% 6
+\BOOKMARK [2][-]{subsection.2.1.4}{Telescope control: The SkyX}{section.2.1}% 7
+\BOOKMARK [2][-]{subsection.2.1.5}{CCD control: Maxim DL}{section.2.1}% 8
+\BOOKMARK [1][-]{section.2.2}{Acquiring a target}{chapter.2}% 9
+\BOOKMARK [2][-]{subsection.2.2.1}{Aligning the pointing of the telescope}{section.2.2}% 10
+\BOOKMARK [2][-]{subsection.2.2.2}{Focussing the telescope}{section.2.2}% 11
+\BOOKMARK [2][-]{subsection.2.2.3}{Selecting a guide star}{section.2.2}% 12
+\BOOKMARK [1][-]{section.2.3}{Science imaging}{chapter.2}% 13
+\BOOKMARK [1][-]{section.2.4}{Close down procedures}{chapter.2}% 14
+\BOOKMARK [2][-]{subsection.2.4.1}{CCD control: Maxim DL}{section.2.4}% 15
+\BOOKMARK [2][-]{subsection.2.4.2}{Telescope control: The SkyX}{section.2.4}% 16
+\BOOKMARK [2][-]{subsection.2.4.3}{Locking the RA and DEC drives}{section.2.4}% 17
+\BOOKMARK [2][-]{subsection.2.4.4}{Dome and telescope cover}{section.2.4}% 18
+\BOOKMARK [2][-]{subsection.2.4.5}{Disconnect power}{section.2.4}% 19
+\BOOKMARK [1][-]{section.2.5}{Check lists}{chapter.2}% 20
+\BOOKMARK [2][-]{subsection.2.5.1}{Start of Night Check List}{section.2.5}% 21
+\BOOKMARK [2][-]{subsection.2.5.2}{End of Night Check List}{section.2.5}% 22
+\BOOKMARK [0][-]{chapter.3}{Advanced Observation Procedures}{}% 23
+\BOOKMARK [1][-]{section.3.1}{Remote observing}{chapter.3}% 24
+\BOOKMARK [2][-]{subsection.3.1.1}{Remote access}{section.3.1}% 25
+\BOOKMARK [2][-]{subsection.3.1.2}{Weather conditions}{section.3.1}% 26
+\BOOKMARK [1][-]{section.3.2}{Instrument change}{chapter.3}% 27
+\BOOKMARK [2][-]{subsection.3.2.1}{The CCD camera for photometry}{section.3.2}% 28
+\BOOKMARK [2][-]{subsection.3.2.2}{The Spectrograph}{section.3.2}% 29
+\BOOKMARK [0][-]{chapter.4}{Photometry}{}% 30
+\BOOKMARK [1][-]{section.4.1}{Standard stars and calibration}{chapter.4}% 31
+\BOOKMARK [1][-]{section.4.2}{The Point Spread Function}{chapter.4}% 32
+\BOOKMARK [1][-]{section.4.3}{Aperture photometry}{chapter.4}% 33
+\BOOKMARK [0][-]{chapter.5}{Spectroscopy}{}% 34
