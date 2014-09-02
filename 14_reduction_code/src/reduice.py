@@ -11,6 +11,7 @@ import os,csv,math,shutil,sys
 import asciidata,operator,copy,itertools
 import scipy.spatial as spatial
 import scipy.ndimage as ndimage #can use for filters (high/low pass)
+import divide
 
 fits=pyfits
 nu=np
@@ -43,7 +44,7 @@ def get_flats(path=None,combine_type='mean',outdir=None,
     if outdir is None:
         outdir = gui_getdir(title='Please Select Save Directory')
     #load path to flats
-    fits_path = sorted(glob(path+'*'))
+    fits_path = divide.get_filelist(path)
     fits_path = get_fits_type(fits_path,'flat')
     filters = {}
     #sort flats by filter
@@ -64,6 +65,10 @@ def get_flats(path=None,combine_type='mean',outdir=None,
         if not outdir.endswith('/'):
             outdir += '/'
     for i in out.keys():
+        out[i]   -= out[i].min()
+        out[i]   /= out[i]/out[i].max()
+        hdr[i].add_history('Normalized') #nomalizing the flats
+
         basename = os.path.split(filters[i][0])[-1]
         basename = os.path.splitext(basename)[0]
         tofits(outdir+basename+'_%s.fits'%combine_type.lower(), out[i],
@@ -78,7 +83,7 @@ def get_darks(path=None, combine_type='mean', outdir=None,
     directory, sorts by Filter options (can have multiple) and out 
     puts fits file to outdir and also out ndarray of combined fits 
     files and fits header with modified history.  Combine types can 
-    include: "mean","median","sum" and "sigmaclip."
+    include: "sigmaclip","median","sum" and "sigmaclip."
     Known Issues:
     Median and sigmaclip combine give artifacts when use.'''
 
@@ -297,8 +302,10 @@ def gui_getdir(initdir=os.curdir,title='Please Select Dir'):
     '''(str, str) -> unicode
 
     Uses tk to make a GUI to get path to a directory.'''
-
-    return tk.askdirectory(initialdir=initdir, title=title)
+    path = tk.askdirectory(initialdir=initdir, title=title)
+    if not path.endswith( '/' ):
+      path += '/'
+    return path
 
 def get_fits_type(indir,keyword):
     '''(list or str, str) -> list of str
