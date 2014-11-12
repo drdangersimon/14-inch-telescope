@@ -2,11 +2,11 @@
 #Thuso Simon March 18 2013
 
 import numpy as nu
-import ds9
+#import ds9
 import pylab as lab
 import tkFileDialog as tk
 import pyfits as fits
-import gui_reduice as gui
+import reduice as gui
 
 class Phot(object):
     '''Class for photmetry of a fits image. Has  functions to help determine
@@ -95,8 +95,8 @@ class Phot(object):
         for i in range(len(self.XYinfo)):
             totsum = 0
             for j in x:
-                tempsum = data[i[0]
-                totsum += data[i[0]
+                tempsum = data[i[0]]
+                totsum += data[i[0]]
 
     def _get_20_brightest(self, N=20):
         '''plots and gets N brightest stars in image'''

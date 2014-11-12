@@ -1,11 +1,12 @@
 import tkFileDialog as tk
 import numpy as np
-import pylab as lab
-import pyfits 
+import pylab as plt
+import pyfits  as fits
 from glob import glob
 import os,csv,math,shutil,sys
-from reduice import*
-import divide
+import reduice
+import organize_fits as org_fits
+import utilities as util
 import tkMessageBox
 
 def SubtractBias(path=None,outdir=None):
@@ -40,7 +41,7 @@ def SubtractBias(path=None,outdir=None):
 		dim_fits       = get_dim(hdr_fit)
 
 		#checks if the bias and fits have the same dimension
-		if dim_fits==dim_bias:
+		if dim_fits == dim_bias:
 			new_array       = fits_array - bias
 		else:
 			print 'arrays not the same sizes'
@@ -94,19 +95,7 @@ def RemoveDarks(path=None):
 
 			savefits('dark removed', path , fit, new_array,hdr)
 
-def fitype(fit,ftype=None):
-	'''Returns True if the fit is of type ftype (Dark or Bias)
-	param fit: is the fit file of intrest
-	param ftye: is the type of fit(bais,flat). If ftype is None then
-	 the method just checks if fit is a fits file, returns True is its a fits'''
- 
-	if not (fit.endswith('.fit') or fit.endswith('.fits')):
-		return False
-	if ftype != None:
-		if pyfits.getval(fit,'IMAGETYP') == ftype+' Frame':
-			return False
 
-	return True
 
 def RemoveFlat(path=None):
 	'''Divides the master flat from the fits and stores them in Flatfielded'''
