@@ -9,6 +9,10 @@ import scipy.linalg
 import scipy.spatial
 import pylab as plt
 import pyfits as fits
+import asciidata
+import utilities as util
+
+sexcmd='sex'
 
 class Identification:
 	"""
@@ -307,7 +311,7 @@ def affineremap(filepath, transform, shape, alifilepath=None, outdir = "alipy_ou
 	(matrix, offset) = inv.matrixform()
 	#print matrix, offset
 	
-	data, hdr = fromfits(filepath, hdu = hdu, verbose = verbose)
+	data, hdr = util.fromfits(filepath, hdu = hdu, verbose = verbose)
 	data = scipy.ndimage.interpolation.affine_transform(data, matrix, offset=offset, output_shape = shape)
 	
 	basename = os.path.splitext(os.path.basename(filepath))[0]
@@ -320,7 +324,7 @@ def affineremap(filepath, transform, shape, alifilepath=None, outdir = "alipy_ou
 		os.makedirs(outdir)
 	#add fits header about transform	
 	hdr.add_history('Alighn.py: Did Affine remap to Alighn fits')
-	tofits(alifilepath, data, hdr = hdr, verbose = verbose)
+	util.tofits(alifilepath, data, hdr = hdr, verbose = verbose)
 	
 	
 	if makepng:

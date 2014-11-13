@@ -8,7 +8,7 @@ import reduice
 import organize_fits as org_fits
 import utilities as util
 import tkMessageBox
-import ipdb
+
 
 def SubtractBias(path=None, outdir=None):
     '''(str,str) -> None 
@@ -96,7 +96,7 @@ def RemoveFlat(path=None):
     '''Divides the master flat from the fits and stores them in Flatfielded'''
     if path==None:
         path = reduice.gui_getdir(title='Please Select fits Directory')
-    flats_dic, hdr = reduice.get_flats(path= os.path.join(path,'Flats'),
+    flats_dic, hdr = reduice.get_flats(path=os.path.join(path,'Flats'),
                                        outdir=os.path.join(path,'Reduced'))
     lights = glob(os.path.join(path, 'Reduced/Darked/*'))
     if len(lights) == 0:
@@ -112,10 +112,8 @@ def RemoveFlat(path=None):
     flit = flats_dic.keys()  
     hdrs = hdr.values()
     outpath = os.path.join(path, 'Reduced/Flatfielded')
-    ipdb.set_trace()
 	#iterating through the different filter flats
     for i in xrange(len(flats)):
-        
         Filter = flit[i]
         dim_flat = util.get_dim(hdrs[i])
         #iterating through the light files(biased or darked)

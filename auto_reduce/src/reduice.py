@@ -16,7 +16,7 @@ import organize_fits as org_fits
 from scipy.stats import sigmaclip
 
 ###main program
-def get_flats(path=None, combine_type='mean', outdir=None,
+def get_flats(path=None, combine_type='median', outdir=None,
 	 Filter='FILTER'):
     '''(str,str,str,str) -> dict(ndarry), dict(asciidata)
 
@@ -78,7 +78,7 @@ def get_flats(path=None, combine_type='mean', outdir=None,
                hdr[i],verbose=False)
     return out, hdr
 
-def get_darks(path=None, combine_type='mean', outdir=None,
+def get_darks(path=None, combine_type='median', outdir=None,
               Filter=('SET-TEMP','EXPTIME')):
     '''(str,str,str,tuple(str) or str) -> dict(ndarry), dict(asciidata)
 
@@ -136,7 +136,7 @@ def get_darks(path=None, combine_type='mean', outdir=None,
 
 
 
-def get_bias(path=None, combine_type='mean', outdir=None, Filter='SET-TEMP'):
+def get_bias(path=None, combine_type='median', outdir=None, Filter='SET-TEMP'):
     '''(str, str, str, str) -> dict(ndarray), dict(asciidata)
 
     Opens bias directory, combines all *.fits or *.fit files in
@@ -188,7 +188,7 @@ def get_bias(path=None, combine_type='mean', outdir=None, Filter='SET-TEMP'):
     return out,hdr
 
   
-def stack_images(path=None, combine_type='mean', outdir=None):
+def stack_images(path=None, combine_type='median', outdir=None):
     '''(str, str, str) -> dict(ndarray), dict(asciidata)
 
     Opens image directory, combines all *.fits or *.fit files 
@@ -373,7 +373,7 @@ def combine_medium(file_list , num=70):
                  len(file_list))
         temp = np.zeros(shape)
         for i,j in enumerate(file_list):
-            temp[:,:,i],hdr = fits.fromfits(j,verbose=False)
+            temp[:,:,i],hdr = util.fromfits(j,verbose=False)
         out = np.median(temp,2)
     else:
         #low ram but takes longer
