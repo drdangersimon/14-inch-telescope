@@ -16,21 +16,30 @@ def fitype(fit, ftype=None):
 
 	return True
 
+def get_dim(hdr):
+    '''Like shape for imputs hdu instead of file type
+	Returns the dimensions of fits file
+	str -> tuple'''
+    return (hdr['NAXIS1'],hdr['NAXIS2'])
+
 
 def shape(filepath, hdu = 0, verbose=True):
-	"""
+    """
 	Returns the 2D shape (width, height) of a FITS image.
-	
+	filepath can either be a str to the fits file or an hdr object
 	:param hdu: The hdu of the fits file that you want me to use. 0 is primary. If multihdu, 1 is usually science.
 
 	
-	"""
-	hdr = fits.getheader(filepath, hdu)
-	if hdr["NAXIS"] != 2:
+    """
+    if not isinstance(filepath, str):
+        # this is bad but will work for now
+        return get_dim(filepath)
+    hdr = fits.getheader(filepath, hdu)
+    if hdr["NAXIS"] != 2:
 		raise RuntimeError("Hmm, this hdu is not a 2D image !")
-	if verbose:
+    if verbose:
 		print "Image shape of %s : (%i, %i)" % (os.path.basename(filepath), int(hdr["NAXIS1"]), int(hdr["NAXIS2"]))
-	return (int(hdr["NAXIS1"]), int(hdr["NAXIS2"]))
+    return (int(hdr["NAXIS1"]), int(hdr["NAXIS2"]))
 	
 
 def fromfits(infilename, hdu = 0, verbose = True):
@@ -79,7 +88,6 @@ def tofits(outfilename, pixelarray, hdr = None, verbose = True):
 
 def get_fits_type(indir, keyword):
     '''(list or str, str) -> list of str
-
     Removes files without the *.fits or *.fit extentions.
     '''
     #take out non fits files
@@ -96,3 +104,15 @@ def get_fits_type(indir, keyword):
             else:
                 indir.pop(i)
     return indir
+
+
+def savefits(hsty, path, fit, arry, hdr):
+    '''(str,str,str,str)->None
+	The method saves fits into their new dirs'''
+    try:
+        new_path = fit[fit.rfind('/'):]
+        hdr.add_history(hsty)
+        tofits(path + new_path ,arry , hdr)
+    # need to put exception
+    except:
+        print "No such file or directory: %s from %s"%(path, fit)

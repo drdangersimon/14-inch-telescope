@@ -16,9 +16,9 @@ def check_ccd_type(path=None):
   		path = reduice.gui_getdir(title='Please Select raw fits Directory')
 	
 	if not os.path.exists(path+'Spectral/'):
-  		os.makedirs(path+ '/Spectral' )
+  		os.makedirs(path+ 'Spectral' )
 	if not os.path.exists(path+'Photometry/'):
-  		os.makedirs(path+ '/Photometry' )
+  		os.makedirs(path+ 'Photometry' )
 	
 	#getting all the files in the main dir
  	files = get_filelist(path)
@@ -29,9 +29,9 @@ def check_ccd_type(path=None):
 		ccdtype = fits.getval(fit,'INSTRUME') #instrument used to make fit
 		#moving to appropriate dir
 		if ccdtype == 'SBIG ST-7/7E/7XE':
-			shutil.move(fit, os.path.join(path, '/Spectral'))
+			shutil.move(fit, os.path.join(path, 'Spectral'))
 		else:
-			shutil.move(fit,os.path.join(path, '/Photometry'))
+			shutil.move(fit,os.path.join(path, 'Photometry'))
 	
 	clean(path)
 
@@ -161,7 +161,6 @@ def get_filelist(path=None):
 	'''(str)--->(list)
 	recursivly gets the filenames in a dir and its subdirs	
 	''' 
-
 	flist=[]
 	for root, subdir, files in os.walk(path):
 		for f in files:
@@ -176,15 +175,15 @@ def products(outdir=None):
     and those with removed flat are saved in the Flatfielded directory'''
  
     if outdir == None:
-        outdir=reduice.gui_getdir(title='Please Select save Directory')
+        outdir = reduice.gui_getdir(title='Please Select save Directory')
     outdir += '/Reduced'
     if not os.path.exists(outdir): 
         os.makedirs(outdir)
-    if not os.path.exists(outdir+'/Flatfielded'):  
-        os.makedirs(outdir+'/Flatfielded')
-    if not os.path.exists(outdir+'/Darked'):
-        os.makedirs(outdir+'/Darked')
-    if not os.path.exists(outdir+'/Biased'):
-        os.makedirs(outdir+'/Biased')
+    if not os.path.exists(os.path.join(outdir,'Flatfielded')):  
+        os.makedirs(os.path.join(outdir,'Flatfielded'))
+    if not os.path.exists(os.path.join(outdir,'Darked')):
+        os.makedirs(os.path.join(outdir,'Darked'))
+    if not os.path.exists(os.path.join(outdir,'Biased')):
+        os.makedirs(os.path.join(outdir,'Biased'))
 
 

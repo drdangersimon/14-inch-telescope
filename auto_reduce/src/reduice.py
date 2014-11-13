@@ -15,8 +15,6 @@ import utilities as util
 import organize_fits as org_fits
 from scipy.stats import sigmaclip
 
-sexcmd = 'sex'
-
 ###main program
 def get_flats(path=None, combine_type='mean', outdir=None,
 	 Filter='FILTER'):
@@ -59,26 +57,26 @@ def get_flats(path=None, combine_type='mean', outdir=None,
             filters[filt] = [i]
         else:
             filters[filt].append(i)
-
+    
     out,hdr = {},{}
-    for i in filters.keys():
-        out[i],hdr[i] = comm(filters[i])
     #save as fits?
     if outdir is None:
         outdir = path
     else:
         if not outdir.endswith('/'):
             outdir += '/'
-    for i in out.keys():
-        out[i]   -= out[i].min()
-        out[i]   /= out[i]/out[i].max()
+    for i in filters:
+        # combine flats for each filter
+        out[i], hdr[i] = comm(filters[i])
+        # Normailize by mean
+        out[i] /= out[i].mean()
         hdr[i].add_history('Normalized') #nomalizing the flats
 
         basename = os.path.split(filters[i][0])[-1]
         basename = os.path.splitext(basename)[0]
         util.tofits(outdir+basename+'_%s.fits'%combine_type.lower(), out[i],
                hdr[i],verbose=False)
-    return out,hdr
+    return out, hdr
 
 def get_darks(path=None, combine_type='mean', outdir=None,
               Filter=('SET-TEMP','EXPTIME')):
